@@ -1,0 +1,32 @@
+{
+    "name": "svc-mcp-server",
+    "version": "1.0.0",
+    "description": "MCP Server for IBM SAN Volume Controller (SVC)",
+    "main": "build/index.js",
+    "scripts": {
+        "build": "tsc",
+        "start": "node build/index.js",
+        "dev": "ts-node src/index.ts"
+    },
+    "keywords": [
+        "mcp",
+        "svc",
+        "ibm",
+        "storage",
+        "server"
+    ],
+    "author": "",
+    "license": "ISC",
+    "dependencies": {
+        "@modelcontextprotocol/sdk": "^1.0.1",
+        "dotenv": "^16.4.5",
+        "ssh2": "^1.15.0",
+        "zod": "^3.23.8"
+    },
+    "devDependencies": {
+        "@types/node": "^20.12.12",
+        "@types/ssh2": "^1.15.0",
+        "ts-node": "^10.9.2",
+        "typescript": "^5.4.5"
+    }
+}
