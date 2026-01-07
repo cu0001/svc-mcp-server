@@ -2,14 +2,18 @@
   "mcpServers": {
     "svc": {
       "command": "node",
-      "args": ["${PWD}/build/index.js"],
+      "args": ["../build/index.js"],
       "env": {
         "SVC_HOST": "your-svc-hostname",
+        "SVC_PORT": "22",
         "SVC_USERNAME": "superuser",
         "SVC_PASSWORD": "your-password",
-        "SVC_PRIVATE_KEY_PATH": "/path/to/private/key",
-        "SVC_PROXY_HOST": "your-proxy-host",
-        "SVC_PROXY_PORT": "8080"
+        "SVC_PRIVATE_KEY_PATH": "/path/to/svc/private/key",
+        "SVC_PROXY_HOST": "your-proxy-hostname",
+        "SVC_PROXY_PORT": "22",
+        "SVC_PROXY_USERNAME": "proxy-username",
+        "SVC_PROXY_PASSWORD": "proxy-password",
+        "SVC_PROXY_PRIVATE_KEY_PATH": "/path/to/proxy/private/key"
       }
     }
   }

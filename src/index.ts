@@ -21,6 +21,9 @@ const config: SvcConfig = {
     privateKey: process.env.SVC_PRIVATE_KEY_PATH,
     proxyHost: process.env.SVC_PROXY_HOST,
     proxyPort: process.env.SVC_PROXY_PORT ? parseInt(process.env.SVC_PROXY_PORT) : undefined,
+    proxyUsername: process.env.SVC_PROXY_USERNAME,
+    proxyPassword: process.env.SVC_PROXY_PASSWORD,
+    proxyPrivateKey: process.env.SVC_PROXY_PRIVATE_KEY_PATH,
 };
 
 const svcClient = new SvcClient(config);
@@ -49,79 +52,17 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
                 },
             },
             {
-                name: 'check_system_errors',
-                description: 'Check most recent system error logs (lslog)',
+                name: 'execute_svc_command',
+                description: 'Execute any SVC CLI command. This is a generic tool that allows you to run any SVC command directly.',
                 inputSchema: {
                     type: 'object',
                     properties: {
-                        limit: {
-                            type: 'number',
-                            description: 'Number of logs to retrieve (default: 10)',
+                        command: {
+                            type: 'string',
+                            description: 'The SVC CLI command to execute (e.g., "lsvdisk", "lshost", "mkvdisk -mdiskgrp pool0 -size 10 -unit gb -name vol1")',
                         },
                     },
-                },
-            },
-            {
-                name: 'create_volume',
-                description: 'Create a new volume (mkvdisk)',
-                inputSchema: {
-                    type: 'object',
-                    properties: {
-                        pool: {
-                            type: 'string',
-                            description: 'Name of the MDisk group (storage pool)',
-                        },
-                        size: {
-                            type: 'number',
-                            description: 'Size of the volume',
-                        },
-                        unit: {
-                            type: 'string',
-                            enum: ['gb', 'tb', 'mb'],
-                            description: 'Unit for the size',
-                        },
-                        name: {
-                            type: 'string',
-                            description: 'Name of the new volume',
-                        },
-                    },
-                    required: ['pool', 'size', 'unit', 'name'],
-                },
-            },
-            {
-                name: 'create_flashcopy_mapping',
-                description: 'Create a FlashCopy mapping (mkfcmap)',
-                inputSchema: {
-                    type: 'object',
-                    properties: {
-                        source: {
-                            type: 'string',
-                            description: 'Name or ID of the source volume',
-                        },
-                        target: {
-                            type: 'string',
-                            description: 'Name or ID of the target volume',
-                        },
-                        name: {
-                            type: 'string',
-                            description: 'Name for the new FlashCopy mapping',
-                        },
-                    },
-                    required: ['source', 'target', 'name'],
-                },
-            },
-            {
-                name: 'start_flashcopy',
-                description: 'Start a FlashCopy mapping (startfcmap -prep)',
-                inputSchema: {
-                    type: 'object',
-                    properties: {
-                        name: {
-                            type: 'string',
-                            description: 'Name or ID of the FlashCopy mapping to start',
-                        },
-                    },
-                    required: ['name'],
+                    required: ['command'],
                 },
             },
         ],
@@ -147,75 +88,20 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                 };
             }
 
-            case 'check_system_errors': {
-                const args = request.params.arguments as { limit?: number } | undefined;
-                const limit = args?.limit || 10;
-                // lslog -order id means order by ID, usually ascending? No, usually we want recent.
-                // Standard lslog without arguments usually shows recent first or lists them.
-                // Depending on SVC version, `lslog` might list errors.
-                // Let's use `lslog -order id` as in plan, but assume it might need adjustment if ordering is reversed.
-                // Actually `lslog` lists cluster error log.
-                const command = `lslog -order id -limit ${limit}`;
-                const result = await svcClient.executeCommand(command);
+            case 'execute_svc_command': {
+                const args = request.params.arguments as { command: string };
+                if (!args.command || args.command.trim() === '') {
+                    throw new McpError(
+                        ErrorCode.InvalidParams,
+                        'Command parameter is required and cannot be empty'
+                    );
+                }
+                const result = await svcClient.executeCommand(args.command);
                 return {
                     content: [
                         {
                             type: 'text',
                             text: result,
-                        },
-                    ],
-                };
-            }
-
-            case 'create_volume': {
-                const args = request.params.arguments as {
-                    pool: string;
-                    size: number;
-                    unit: string;
-                    name: string;
-                };
-                // mkvdisk -mdiskgrp <pool> -size <size> -unit <unit> -name <name>
-                const command = `mkvdisk -mdiskgrp ${args.pool} -size ${args.size} -unit ${args.unit} -name ${args.name}`;
-                const result = await svcClient.executeCommand(command);
-                return {
-                    content: [
-                        {
-                            type: 'text',
-                            text: result,
-                        },
-                    ],
-                };
-            }
-
-            case 'create_flashcopy_mapping': {
-                const args = request.params.arguments as {
-                    source: string;
-                    target: string;
-                    name: string;
-                };
-                // mkfcmap -source <source> -target <target> -name <name>
-                const command = `mkfcmap -source ${args.source} -target ${args.target} -name ${args.name}`;
-                const result = await svcClient.executeCommand(command);
-                return {
-                    content: [
-                        {
-                            type: 'text',
-                            text: result,
-                        },
-                    ],
-                };
-            }
-
-            case 'start_flashcopy': {
-                const args = request.params.arguments as { name: string };
-                // startfcmap -prep <name>
-                const command = `startfcmap -prep ${args.name}`;
-                const result = await svcClient.executeCommand(command);
-                return {
-                    content: [
-                        {
-                            type: 'text',
-                            text: result, // startfcmap usually has no output on success, or a task ID
                         },
                     ],
                 };

@@ -1,6 +1,6 @@
 import { Client, ConnectConfig } from 'ssh2';
 import * as dotenv from 'dotenv';
-import * as http from 'http';
+import * as fs from 'fs';
 
 dotenv.config();
 
@@ -12,6 +12,9 @@ export interface SvcConfig {
     privateKey?: string;
     proxyHost?: string;
     proxyPort?: number;
+    proxyUsername?: string;
+    proxyPassword?: string;
+    proxyPrivateKey?: string;
 }
 
 export class SvcClient {
@@ -35,30 +38,48 @@ export class SvcClient {
 
     private async createProxyConnection(): Promise<any> {
         return new Promise((resolve, reject) => {
-            if (!this.config.proxyHost || !this.config.proxyPort) {
+            if (!this.config.proxyHost) {
                 return resolve(undefined);
             }
 
-            const req = http.request({
+            const proxyClient = new Client();
+            
+            const proxyConfig: ConnectConfig = {
                 host: this.config.proxyHost,
-                port: this.config.proxyPort,
-                method: 'CONNECT',
-                path: `${this.config.host}:${this.config.port || 22}`,
-            });
+                port: this.config.proxyPort || 22,
+                username: this.config.proxyUsername || 'root',
+            };
 
-            req.on('connect', (res, socket, head) => {
-                if (res.statusCode === 200) {
-                    resolve(socket);
-                } else {
-                    reject(new Error(`Proxy connection failed: ${res.statusCode} ${res.statusMessage}`));
+            // SSH proxy authentication
+            if (this.config.proxyPrivateKey) {
+                try {
+                    proxyConfig.privateKey = fs.readFileSync(this.config.proxyPrivateKey);
+                } catch (err: any) {
+                    return reject(new Error(`Failed to read proxy private key: ${err.message}`));
                 }
-            });
+            } else if (this.config.proxyPassword) {
+                proxyConfig.password = this.config.proxyPassword;
+            } else {
+                return reject(new Error('Proxy authentication required: provide either proxyPassword or proxyPrivateKey'));
+            }
 
-            req.on('error', (err) => {
-                reject(new Error(`Proxy request error: ${err.message}`));
-            });
-
-            req.end();
+            proxyClient.on('ready', () => {
+                proxyClient.forwardOut(
+                    '127.0.0.1',
+                    0,
+                    this.config.host,
+                    this.config.port || 22,
+                    (err, stream) => {
+                        if (err) {
+                            proxyClient.end();
+                            return reject(new Error(`SSH tunnel failed: ${err.message}`));
+                        }
+                        resolve(stream);
+                    }
+                );
+            }).on('error', (err) => {
+                reject(new Error(`Proxy SSH connection failed: ${err.message}`));
+            }).connect(proxyConfig);
         });
     }
 
