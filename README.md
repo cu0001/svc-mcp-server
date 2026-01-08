@@ -7,11 +7,8 @@ IBM SAN Volume Controller (SVC) 用の Model Context Protocol (MCP) サーバー
 
 このMCPサーバーは以下の操作をサポートしています：
 
-- **システムステータス確認** (`check_system_status`): SVCシステムの状態を確認
-- **エラーログ確認** (`check_system_errors`): 最新のシステムエラーログを取得
-- **ボリューム作成** (`create_volume`): 新しいボリュームを作成
-- **FlashCopyマッピング作成** (`create_flashcopy_mapping`): FlashCopyマッピングを作成
-- **FlashCopy開始** (`start_flashcopy`): FlashCopyマッピングを開始
+- **システムステータス確認** (`check_system_status`): SVCシステムの状態を確認（lssystemコマンドを実行）
+- **汎用コマンド実行** (`execute_svc_command`): 任意のSVC CLIコマンドを直接実行できる汎用ツール。lsvdisk、lshost、mkvdiskなど、あらゆるSVCコマンドに対応
 
 ## 前提条件
 
@@ -144,17 +141,43 @@ cp .bob/mcp.json.example .bob/mcp.json
 
 IBM Bob で以下のようなプロンプトを使用できます：
 
+### システムステータスの確認
 ```
 SVCシステムのステータスを確認してください
 ```
 
+### ボリューム操作
 ```
-最新のエラーログを表示してください
+すべてのボリュームをリストアップしてください
 ```
 
 ```
 pool1に100GBのボリュームを作成してください。名前はtest_vol01です
 ```
+
+```
+test_vol01という名前のボリュームの詳細情報を表示してください
+```
+
+### ホスト管理
+```
+登録されているすべてのホストを表示してください
+```
+
+```
+host1という名前のホストの詳細情報を確認してください
+```
+
+### その他の操作
+```
+最新のイベントログを表示してください
+```
+
+```
+すべてのストレージプールの使用状況を確認してください
+```
+
+**注意**: `execute_svc_command` ツールを使用することで、上記以外のあらゆるSVC CLIコマンドを実行できます。IBM Bobに自然言語で指示すると、適切なSVCコマンドに変換して実行します。
 
 ---
 
